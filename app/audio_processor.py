@@ -1,20 +1,16 @@
 import numpy as np
 from typing import Dict, Any, List, Optional, Deque
 from collections import deque
-from .model import get_classifier
+from .classifier_interface import EmotionClassifier
 
 class AudioProcessor:
-    def __init__(self, sample_rate: int = 16000, window_seconds: int = 3):
+    def __init__(self, classifier: EmotionClassifier, sample_rate: int = 16000, window_seconds: int = 3):
+        self.classifier = classifier
         self.sample_rate = sample_rate
         self.window_samples = sample_rate * window_seconds
         # Fixed-size ring buffer to avoid unbounded growth
         self.buffer: Deque[float] = deque(maxlen=self.window_samples)
-        self.classifier = None
         self.latest_input_timestamp: Optional[int] = None
-
-    def _ensure_model(self):
-        if self.classifier is None:
-            self.classifier = get_classifier()
 
     def add_chunk(self, chunk: np.ndarray, input_timestamp: Optional[int] = None) -> None:
         # Keep only the last window worth of samples
@@ -43,8 +39,7 @@ class AudioProcessor:
 
         # Inference
         try:
-            self._ensure_model()
-            result = self.classifier(audio, sampling_rate=self.sample_rate)
+            result = self.classifier.classify(audio, sample_rate=self.sample_rate)
         except Exception as e:
             return {"ready": False, "notReadyReason": f"inference_error: {e}"}
 
@@ -59,14 +54,13 @@ class AudioProcessor:
         }
 
     def is_model_loaded(self) -> bool:
-        return self.classifier is not None
+        return self.classifier.is_loaded()
 
     def self_test(self) -> Dict[str, Any]:
         """Run a lightweight self-test to verify classifier loads and runs."""
         try:
-            self._ensure_model()
             test_audio = (np.random.randn(self.sample_rate).astype(np.float32) * 0.05)
-            result = self.classifier(test_audio, sampling_rate=self.sample_rate)
+            result = self.classifier.classify(test_audio, sample_rate=self.sample_rate)
             ok = isinstance(result, list) and len(result) > 0 and 'label' in result[0] and 'score' in result[0]
             return {
                 "ok": bool(ok),

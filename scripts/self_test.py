@@ -1,8 +1,12 @@
+from app.wav2vec_classifier import Wav2VecEmotionClassifier
 from app.audio_processor import AudioProcessor
 import numpy as np
 
 if __name__ == "__main__":
-    processor = AudioProcessor(sample_rate=16000, window_seconds=1)
+    # Initialize classifier
+    classifier = Wav2VecEmotionClassifier()
+    processor = AudioProcessor(classifier=classifier, sample_rate=16000, window_seconds=1)
+    
     print("Running classifier self-test...")
     test = processor.self_test()
     print("Self-test:", test)
