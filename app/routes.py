@@ -33,7 +33,18 @@ async def websocket_endpoint(websocket: WebSocket):
             processor.add_chunk(audio_chunk)
             result = processor.process(input_timestamp=input_timestamp)
 
+            # Always inform client, even when not ready, to surface reasons
             if not result.get("ready"):
+                payload = {"ready": False}
+                if "notReadyReason" in result:
+                    payload["notReadyReason"] = result["notReadyReason"]
+                if "silence" in result:
+                    payload["silence"] = result["silence"]
+                if "level" in result:
+                    payload["level"] = result["level"]
+                if input_timestamp is not None:
+                    payload["inputTimestamp"] = input_timestamp
+                await websocket.send_json(payload)
                 continue
 
             await websocket.send_json(result)

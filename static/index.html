@@ -61,6 +61,22 @@
                         const data = JSON.parse(e.data);
                         const receivedTimestamp = Date.now();
                         
+                        // Show readiness reason when not ready
+                        if (data.ready === false && data.notReadyReason) {
+                            let reason = data.notReadyReason;
+                            if (reason === 'insufficient_buffer') {
+                                document.getElementById('status').innerText = '⏳ Buffering audio...';
+                            } else if (reason === 'silence') {
+                                document.getElementById('status').innerText = '🤫 Too quiet — speak up!';
+                            } else {
+                                document.getElementById('status').innerText = '⚠️ ' + reason;
+                            }
+                            if (typeof data.level === 'number') {
+                                document.getElementById('audioLevel').innerText = 'Level: ' + data.level + '%';
+                            }
+                            return;
+                        }
+
                         if (data.silence) {
                             document.getElementById('status').innerText = '⚠️ SILENCE - Speak!';
                             document.getElementById('audioLevel').innerText = 'Level: ' + data.level + '%';
