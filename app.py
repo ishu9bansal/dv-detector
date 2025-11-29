@@ -43,6 +43,12 @@ html = """
         .timestamp-box { background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; margin: 20px auto; max-width: 500px; }
         .timestamp { font-size: 16px; margin: 5px; color: #ffd700; font-family: monospace; }
         .lag { font-size: 18px; margin: 10px; color: #ff6b6b; font-weight: bold; }
+        .emotions-breakdown { background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 500px; }
+        .emotions-breakdown h4 { margin: 0 0 15px 0; font-size: 20px; color: #ffd700; }
+        .emotion-bar { margin: 8px 0; text-align: left; }
+        .emotion-label { font-size: 14px; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .emotion-progress { background: rgba(255,255,255,0.2); border-radius: 10px; height: 20px; overflow: hidden; }
+        .emotion-fill { height: 100%; background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%); transition: width 0.3s; }
         button { padding: 20px 50px; font-size: 24px; cursor: pointer; border: none; border-radius: 50px; background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%); color: white; font-weight: bold; transition: transform 0.2s; margin: 20px; }
         button:hover { transform: scale(1.05); }
         #status { font-size: 20px; margin: 20px; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -60,6 +66,10 @@ html = """
             <div class="timestamp" id="inputTime">Input: --</div>
             <div class="timestamp" id="processedTime">Processed: --</div>
             <div class="lag" id="lagTime">Lag: -- ms</div>
+        </div>
+        <div class="emotions-breakdown">
+            <h4>📊 All Emotions</h4>
+            <div id="emotionsBreakdown"></div>
         </div>
         <button onclick="toggleRecording()">START</button>
         <p id="status">Click START</p>
@@ -97,6 +107,36 @@ html = """
                             if (data.inputTimestamp) {
                                 const lag = receivedTimestamp - data.inputTimestamp;
                                 document.getElementById('lagTime').innerText = 'Lag: ' + lag + ' ms';
+                            }
+                            
+                            // Display all emotions breakdown
+                            if (data.allEmotions) {
+                                // Create a static order for emotions
+                                const emotionOrder = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise'];
+                                const emotionMap = {};
+                                data.allEmotions.forEach(em => {
+                                    emotionMap[em.label] = em.score;
+                                });
+                                
+                                let html = '';
+                                emotionOrder.forEach(emotionName => {
+                                    const score = emotionMap[emotionName] || 0;
+                                    const isPrimary = emotionName === data.emotion;
+                                    const emoji = emojiMap[emotionName] || '🎭';
+                                    const percent = (score * 100).toFixed(1);
+                                    html += `
+                                        <div class="emotion-bar">
+                                            <div class="emotion-label">
+                                                <span>${emoji} ${emotionName.toUpperCase()}${isPrimary ? ' ⭐' : ''}</span>
+                                                <span>${percent}%</span>
+                                            </div>
+                                            <div class="emotion-progress">
+                                                <div class="emotion-fill" style="width: ${percent}%"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                document.getElementById('emotionsBreakdown').innerHTML = html;
                             }
                         }
                     };
@@ -166,9 +206,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     classifier = get_model()
                     result = classifier(audio, sampling_rate=16000)
                     
+                    # Sort emotions by confidence (descending)
+                    sorted_emotions = sorted(result, key=lambda x: x['score'], reverse=True)
+                    
                     await websocket.send_json({
-                        "emotion": result[0]['label'],
-                        "confidence": result[0]['score'],
+                        "emotion": sorted_emotions[0]['label'],
+                        "confidence": sorted_emotions[0]['score'],
+                        "allEmotions": sorted_emotions,
                         "silence": False,
                         "level": int(min(audio_level * 1000, 100)),
                         "inputTimestamp": input_timestamp
