@@ -18,6 +18,6 @@ if __name__ == "__main__":
 
     # Add synthetic audio to meet window
     audio = (np.random.randn(processor.sample_rate).astype(np.float32) * 0.05)
-    processor.add_chunk(audio)
-    res2 = processor.process(input_timestamp=0)
+    processor.add_chunk(audio, input_timestamp=0)
+    res2 = processor.process()
     print("Process (with audio):", res2)
