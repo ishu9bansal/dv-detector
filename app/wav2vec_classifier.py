@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Any
 import numpy as np
 from transformers import pipeline
 from .classifier_interface import EmotionClassifier
@@ -38,7 +38,7 @@ class Wav2VecEmotionClassifier(EmotionClassifier):
             )
             print("✅ Model loaded!")
 
-    def classify(self, audio: np.ndarray, sample_rate: int) -> List[Dict[str, any]]:
+    def classify(self, audio: np.ndarray, sample_rate: int) -> List[Dict[str, Any]]:
         """
         Classify emotion from audio using Wav2Vec model.
         
@@ -50,9 +50,12 @@ class Wav2VecEmotionClassifier(EmotionClassifier):
             List of predictions with 'label' and 'score', sorted by confidence
         """
         self._ensure_loaded()
+        if self._pipeline is None:
+            raise RuntimeError("Model failed to load.")
         result = self._pipeline(audio, sampling_rate=sample_rate)
         # Ensure sorted by score descending
-        return sorted(result, key=lambda x: x['score'], reverse=True)
+        # return sorted(result, key=lambda x: x['score'], reverse=True)
+        return result
 
     def is_loaded(self) -> bool:
         """Check if model is loaded."""

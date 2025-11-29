@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Any
 import numpy as np
 
 
@@ -10,7 +10,7 @@ class EmotionClassifier(ABC):
     """
 
     @abstractmethod
-    def classify(self, audio: np.ndarray, sample_rate: int) -> List[Dict[str, any]]:
+    def classify(self, audio: np.ndarray, sample_rate: int) -> List[Dict[str, Any]]:
         """
         Classify emotion from audio samples.
         
